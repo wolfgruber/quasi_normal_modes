@@ -1,4 +1,4 @@
-# 13.11.19
+# 23.01.20
 # Bachelor Thesis: "Scattering of scalar waves on a Schwarzschild black hole"
 # Ludwig Wolfgruber
 
@@ -18,11 +18,13 @@ from plt_fit import *
 
 # functions:
 def GaussWave(t, r, c, m, shift, sigma):
+    '''Gaussian wave signal for initial data.'''
     e1 = (r-shift-c*t)**2/(4*sigma)
     return np.exp(-e1)/(2*np.sqrt(np.pi*sigma))
 
 
 def Initialize(t, r, c, m, shift, sigma, l):
+    ''' Initializes a signal as initial data.'''
     dt = t[1] - t[0]
     initphi = GaussWave(t[0],r,c,m,shift, sigma) #/ (l+1)
     init1 = GaussWave(t[0]+dt,r,c,m,shift, sigma) #/ (l+1)
@@ -31,8 +33,8 @@ def Initialize(t, r, c, m, shift, sigma, l):
     return initphi, initpsi
 
     
-def Lu_neu(r, dr, i, m, psi, phi, l): # evaluate the differential operator with artificial dissipation
-    '''diff. operator for Schwarzschild metric and EF-coordinates'''
+def Lu_neu(r, dr, i, m, psi, phi, l): 
+    '''Evaluates the differential operator with artificial dissipation.'''
     ri = r[i]
     N = r.size
     eps = 0.2 # factor for smoothing out phi
@@ -63,7 +65,8 @@ def Lu_neu(r, dr, i, m, psi, phi, l): # evaluate the differential operator with 
     return Lu - l * (l+1) * phi[i] / ri**2, newphi  # sph_harm(m=0, n=l, theta=0, phi=0)
 
 
-def TimeStepRK_neu(dt, r, dr, m, phi, psi, l): # compute a timestep with the Runge-Kutta 2 method
+def TimeStepRK_neu(dt, r, dr, m, phi, psi, l):
+    '''Computes a timestep with the Runge-Kutta 2 method.'''
     eps = 0.2
     N = phi.size
     newphi = np.zeros(N)
@@ -84,6 +87,8 @@ def TimeStepRK_neu(dt, r, dr, m, phi, psi, l): # compute a timestep with the Run
 
 
 def Run(dr, R, T, shift, sigma, l_max, mode):
+    '''Runs a simulation for the given values of l. "mode" is set equal to "c"
+    if computing the convergence.'''
     # some constants:
     G = 1
     c = 1
@@ -122,7 +127,8 @@ def Run(dr, R, T, shift, sigma, l_max, mode):
     return phi_l, t, r
 
 
-def convergence(dr, R, T, shift, sigma): # for f = dr/2
+def convergence(dr, R, T, shift, sigma):
+    '''Compute the convergence as a function of time for the given value of l.'''
     print('computing convergence')
     h = dr/4
     h2 = dr/2

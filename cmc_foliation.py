@@ -1,11 +1,10 @@
-# 03.01.20
+# 23.01.20
 # Bachelor Thesis: "Scattering of scalar waves on a Schwarzschild black hole"
 # Ludwig Wolfgruber
 
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy.optimize as opt
-from numba import njit, jit
 
 from ipywidgets import interactive
 import ipywidgets as widgets
@@ -14,12 +13,15 @@ from scipy.special import sph_harm
 
 from plt_fit import *
 
+
+# Setting global constants. Notice that C is a integration constant and C != c == speed of light
 K = 0.5
 C = 1
 
 # functions:
 
 def Initialize(t, r, c, m, shift, sigma, l):
+    '''Initializes a gaussian pulse and its derivatives for the gives parameters.'''
     ampl = 1 #amplitude
 
     initphi = ampl * np.exp(-(r-shift)**2/sigma**2)
@@ -29,6 +31,7 @@ def Initialize(t, r, c, m, shift, sigma, l):
     return initphi, initpsi, initpi
 
 
+# three parameters alpha, beta and gamma:
 def alpha(r, m):
     r1 = r - 1 #  \Omega
     a = r1**2 * r**3 * (2*m*r1 + r) + 1/9 * (3*C*r1**3 + K*r**3)**2
@@ -44,8 +47,8 @@ def gamma(r, m):
     return 1/alpha(r, m)
 
 
-# @jit(parallel=True)
-def Lu(r, i, m, phi, psi, pi,  l): 
+def Lu(r, i, m, phi, psi, pi,  l):
+    '''Evaluates the left hand sider for all three differential equations.'''
     dr = r[1] - r[0]
     ri = r[i]
     N = r.size
@@ -102,7 +105,8 @@ def Lu(r, i, m, phi, psi, pi,  l):
     return newphi, newpsi, newpi
 
 
-def TimeStepRK(dt, r, dr, m, phi, psi, pi, l): # compute a timestep with the Runge-Kutta 2 method
+def TimeStepRK(dt, r, dr, m, phi, psi, pi, l): 
+    '''Computes a timestep with the Runge-Kutta 2 method'''
     eps = 0.5
     N = phi.size
     newphi = np.zeros(N)
@@ -128,6 +132,8 @@ def TimeStepRK(dt, r, dr, m, phi, psi, pi, l): # compute a timestep with the Run
     return newphi, newpsi, newpi
 
 def Run(dr, f, T, shift, sigma, l_max, mode):
+    '''Runs a simulation for the given values of l. "mode" is set equal to "c"
+    if computing the convergence.'''
     print('Initializing')
     # some constants:
     G = 1
@@ -181,18 +187,9 @@ def Run(dr, f, T, shift, sigma, l_max, mode):
 
     return phi_l, t, r
 
-def PlotMovie(t): # plotting phi animated
-    plt.figure(figsize = (12,4))
-    plt.subplot(121)
-    plt.plot(rp, np.log(np.abs(phip[t,:]+0.000001)))
-    plt.ylim(-10,5)
-
-    plt.subplot(122)
-    plt.plot(rp, phip[t,:])
-    plt.ylim(-4,8)
-    plt.show()
 
 def convergence(dr, f, T, shift, sigma, l):
+    '''Compute the convergence as a function of time for the given value of l.'''
     h = dr/4
     h2 = dr/2
     h4 = dr
