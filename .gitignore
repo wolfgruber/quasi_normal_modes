@@ -1,6 +1,0 @@
-.gitignore
-figures
-phi*
-__*
-*.ipynb*
-exec.py
