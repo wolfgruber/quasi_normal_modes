@@ -12,6 +12,7 @@ import ipywidgets as widgets
 from scipy.special import sph_harm
 
 from plt_fit import *
+from time import time
 
 
 # Setting global constants. Notice that C is a integration constant and C != c == speed of light
@@ -194,20 +195,36 @@ def convergence(dr, f, T, shift, sigma, l):
     h2 = dr/2
     h4 = dr
 
+    ti0 = time()
     phi, t, r = Run(h, f, T, shift, sigma, l+1, 'c')
+    ti1 = time() - ti0
+    print("took "+str(ti1)+" time\n")
     phi2, t2, r2 = Run(h2, f, T, shift, sigma, l+1, 'c')
+    ti2 = time() - ti1 - ti0
+    print("took "+str(ti2)+" time\n")
     phi4, t4, r4 = Run(h4, f, T, shift, sigma, l+1, 'c')
+    ti3 = time() - ti2 - ti1 - ti0
+    print("took "+str(ti3)+" time\n")
+    
+    plt.plot(t4, np.linalg.norm(phi4, axis=1), label='phi 4')
+    plt.plot(t2, np.linalg.norm(phi2, axis=1), label='phi 2')
+    plt.plot(t, np.linalg.norm(phi, axis=1), label='phi')
+    
+    plt.legend()
+    plt.show()
 
     # reducing the sizes of the arrays, to make a subtraction possible
-    phi = np.delete( np.delete( phi, np.arange( 1, phi[:,0].size, 2 ), 0 ), np.arange( 1, phi[:,0].size//2, 2 ), 0 )
-    phi = np.delete( phi, np.arange( 1, phi[0,:].size, 2 ), 1 )
+    phi = np.delete(phi, np.arange(1, phi[:,0].size, 2), axis=0)
+    phi = np.delete(phi, np.arange(1, phi[:,0].size, 2), axis=0)
+    phi = np.delete(phi, np.arange(1, phi[0,:].size, 2), axis=1)
+    phi = np.delete(phi, np.arange(1, phi[0,:].size, 2), axis=1)
 
-    phi2 = np.delete( phi2, np.arange( 1, phi2[:,0].size, 2 ), 0 )
-    phi2_small = np.delete( phi2, np.arange( 1, phi2[0,:].size, 2 ), 1 )
+    phi2 = np.delete(phi2, np.arange(1, phi2[:,0].size, 2), axis=0)
+    phi2 = np.delete(phi2, np.arange(1, phi2[0,:].size, 2), axis=1)
 
-    if (phi4.shape != phi2_small.shape) or (phi2.shape != phi.shape):
+    if (phi4.shape != phi2.shape) or (phi2.shape != phi.shape):
         print("Shapes do not match!")
-        print(phi4.shape, phi2_small.shape)
+        print(phi4.shape, phi2.shape)
         print(phi2.shape, phi.shape)
     #else:
     #    print("Seems alright.")
@@ -215,12 +232,21 @@ def convergence(dr, f, T, shift, sigma, l):
     #    print(phi2.shape, phi.shape)
     
 
-    num = np.linalg.norm(phi4-phi2_small, axis=1)
+    num = np.linalg.norm(phi4-phi2, axis=1)
     denom = np.linalg.norm(phi2-phi, axis=1)
     Q = num / denom
     
     np.save('phi_cmc2/conv.npy', Q, allow_pickle=False)
     np.save('phi_cmc2/t_conv.npy', t4, allow_pickle=False)
+    
+    plt.plot(t4, Q)
+    plt.grid(True)
+
+    plt.xlabel('t/m')
+    plt.ylabel('$Q(t)$')
+    plt.ylim(-0.5, 5.5)
+
+    plt.show()
 
     return
 
