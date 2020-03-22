@@ -7,12 +7,6 @@ import matplotlib.pyplot as plt
 import scipy.optimize as opt
 import scipy.special as sp
 
-#from ipywidgets import interactive
-#import ipywidgets as widgets
-
-#import pymp
-#from scipy.special import sph_harm
-
 from plt_fit import *
 
 
@@ -38,7 +32,7 @@ def Lu_neu(r, dr, i, m, psi, phi, l):
     '''Evaluates the differential operator with artificial dissipation.'''
     ri = r[i]
     N = r.size
-    eps = 0.9 # factor for smoothing out phi
+    eps = 0.1 # factor for smoothing out phi
     newphi = psi[i]
 
     if (i == 0):
@@ -50,6 +44,7 @@ def Lu_neu(r, dr, i, m, psi, phi, l):
 
     elif (i == N-1):
         Lu = 0
+        newphi = 0
 
     else:
         a1 = (ri-m)/(dr*(ri**2+2*m*ri)) * (phi[i+1] - phi[i-1])
@@ -61,7 +56,7 @@ def Lu_neu(r, dr, i, m, psi, phi, l):
 
         if (i > 1) and (i < N-2):
             Lu = Lu - eps * (phi[i+2] - 4*phi[i+1] + 6*phi[i] - 4*phi[i-1] + phi[i-2]) / 16
-            newphi = newphi- eps * (phi[i+2] - 4*phi[i+1] + 6*phi[i] - 4*phi[i-1] + phi[i-2]) / 16
+            newphi = newphi - eps * (phi[i+2] - 4*phi[i+1] + 6*phi[i] - 4*phi[i-1] + phi[i-2]) / 16
 
     return Lu - l * (l+1) * phi[i] / ri**2, newphi  # sph_harm(m=0, n=l, theta=0, phi=0)
 
@@ -105,8 +100,12 @@ def Run(dr, R, T, shift, sigma, l_max, mode, f):
 
     phi_l = np.empty((Nt,Nr))
     psi = np.empty((Nt,Nr))
+    
+    start=0
+    if mode == 'c':
+        start = l_max - 1
 
-    for l in range(l_max):
+    for l in range(start, l_max):
         print('computing time evolution for l = '+str(l))
         phi_l[0,:], psi[0,:] = Initialize(t, r, c, m, shift, sigma, l) # computing the initial data
         
@@ -128,17 +127,16 @@ def Run(dr, R, T, shift, sigma, l_max, mode, f):
     return phi_l, t, r
 
 
-def convergence(dr, R, T, shift, sigma, f):
+def convergence(dr, R, T, shift, sigma, f, l):
     '''Compute the convergence as a function of time for the given value of l.'''
     print('computing convergence')
     h = dr/4
     h2 = dr/2
     h4 = dr
     
-    phi, t, r = Run(h, R, T, shift, sigma, 1, 'c', f)
-    phi2, t2, r2 = Run(h2, R, T, shift, sigma, 1, 'c', f)
-    phi4, t4, r4 = Run(h4, R, T, shift, sigma, 1, 'c', f)
-    
+    phi, t, r = Run(h, R, T, shift, sigma, l, 'c', f)
+    phi2, t2, r2 = Run(h2, R, T, shift, sigma, l, 'c', f)
+    phi4, t4, r4 = Run(h4, R, T, shift, sigma, l, 'c', f)
     
     
     plt.plot(t4, np.linalg.norm(phi4, axis=1), label='phi 4')
@@ -147,25 +145,6 @@ def convergence(dr, R, T, shift, sigma, f):
     
     plt.legend()
     plt.show()
-    '''
-    # reducing the sizes of the arrays, to make a subtraction possible
-    phi = np.delete( np.delete( phi, np.arange( 1, phi[:,0].size, 2 ), 0 ), np.arange( 1, phi[:,0].size//2, 2 ), 0 )
-    phi = np.delete( phi, np.arange( 1, phi[:,0].size, 2 ), 0 )
-    phi = np.delete( phi, np.arange( 1, phi[:,0].size, 2 ), 0 )
-    phi = np.delete( phi, np.arange( 1, phi[0,:].size, 2 ), 1 )
-
-    phi2 = np.delete( phi2, np.arange( 1, phi2[:,0].size, 2 ), 0 )
-    phi2 = np.delete( phi2, np.arange( 1, phi2[:,0].size, 2 ), 0 )
-    phi2_small = np.delete( phi2, np.arange( 1, phi2[0,:].size, 2 ), 1 )
-
-    if (phi4.shape != phi2_small.shape) or (phi2.shape != phi.shape):
-        print("Shapes do not match!")
-        print(phi4.shape, phi2_small.shape)
-        print(phi2.shape, phi.shape)
-    #else:
-    #    print("Seems alright.")
-    #    print(phi4.shape, phi2_small.shape)
-    #    print(phi2.shape, phi.shape)'''
         
     phi = np.delete(phi, np.arange(1, phi[:,0].size, 2), axis=0)
     phi = np.delete(phi, np.arange(1, phi[:,0].size, 2), axis=0)
@@ -174,14 +153,17 @@ def convergence(dr, R, T, shift, sigma, f):
 
     phi2_small = np.delete(phi2, np.arange(1, phi2[:,0].size, 2), axis=0)
     phi2_small = np.delete(phi2_small, np.arange(1, phi2[0,:].size, 2), axis=1)
+    
+    np.save('phi_fir/conv_phi4.npy', phi4)
+    np.save('phi_fir/conv_phi2.npy', phi2_small)
+    np.save('phi_fir/conv_phi.npy', phi)
+    np.save('phi_fir/conv_t.npy', t4, allow_pickle=False)
 
     if (phi4.shape != phi2_small.shape) or (phi2_small.shape != phi.shape):
         print("Shapes do not match!")
         print(phi4.shape, phi2_small.shape)
         print(phi2_small.shape, phi.shape)
         
-    ################################   
-
     num = np.linalg.norm(phi4-phi2_small, axis=1)
     denom = np.linalg.norm(phi2_small-phi, axis=1)
     Q = num / denom
@@ -192,14 +174,57 @@ def convergence(dr, R, T, shift, sigma, f):
     plt.plot(t4, Q)
     plt.grid(True)
 
-    plt.xlabel('t/m')
+    plt.xlabel('$t_*/m$')
     plt.ylabel('$Q(t)$')
     plt.ylim(-0.5, 5.5)
 
     plt.show()
     
 
-    return Q, t4
+    return Q[-1]
     
+
+def conv_calc(start, ratio, tratio):
+    
+    phi = np.load('phi_fir/conv_phi.npy')
+    phi2 = np.load('phi_fir/conv_phi2.npy')
+    phi4 = np.load('phi_fir/conv_phi4.npy')
+    t = np.load('phi_fir/conv_t.npy')
+    
+    idx = int(phi.shape[1] * ratio)
+    Tidx = int(len(t) * tratio)
+    start = int(phi.shape[1] * start)
+    
+    phi = phi[:Tidx,start:idx]
+    phi2 = phi2[:Tidx,start:idx]
+    phi4 = phi4[:Tidx,start:idx]
+    t = t[:Tidx]
+    
+    if (phi4.shape != phi2.shape) or (phi2.shape != phi.shape):
+        print("Shapes do not match!")
+        print(phi4.shape, phi2.shape)
+        print(phi2.shape, phi.shape)
+
+
+    num = np.linalg.norm(phi4-phi2, ord=None, axis=1)
+    print(num)
+    denom = np.linalg.norm(phi2-phi, ord=None, axis=1)
+    Q = num / denom
+
+    np.save('phi_fir/conv.npy', Q, allow_pickle=False)
+    np.save('phi_fir/t_conv.npy', t, allow_pickle=False)
+    
+    plt.plot(t, Q)
+    plt.grid(True)
+
+    plt.xlabel('$t_*/m$')
+    plt.ylabel('$Q(t)$')
+    plt.ylim(-0.5, 5.5)
+
+    plt.savefig('convergence_first.jpg', dpi=250)
+    plt.show()
+    
+
+    return Q[-1]
     
 

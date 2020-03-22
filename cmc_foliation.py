@@ -238,6 +238,9 @@ def convergence(dr, f, T, shift, sigma, l):
     
     np.save('phi_cmc2/conv.npy', Q, allow_pickle=False)
     np.save('phi_cmc2/t_conv.npy', t4, allow_pickle=False)
+    np.save('phi_cmc2/conv_phi4.npy', phi4)
+    np.save('phi_cmc2/conv_phi2.npy', phi2)
+    np.save('phi_cmc2/conv_phi.npy', phi)
     
     plt.plot(t4, Q)
     plt.grid(True)
@@ -248,5 +251,46 @@ def convergence(dr, f, T, shift, sigma, l):
 
     plt.show()
 
-    return
+    return Q[-1]
+
+
+def conv_calc(start, ratio):
+    
+    phi = np.load('phi_cmc2/conv_phi.npy')
+    phi2 = np.load('phi_cmc2/conv_phi2.npy')
+    phi4 = np.load('phi_cmc2/conv_phi4.npy')
+    t = np.load('phi_cmc2/t_conv.npy')
+    
+    idx = int(phi.shape[1] * ratio)
+    start = int(phi.shape[1] * start)
+    
+    phi = phi[:,start:idx]
+    phi2 = phi2[:,start:idx]
+    phi4 = phi4[:,start:idx]
+    
+    if (phi4.shape != phi2.shape) or (phi2.shape != phi.shape):
+        print("Shapes do not match!")
+        print(phi4.shape, phi2_small.shape)
+        print(phi2_small.shape, phi.shape)
+
+
+    num = np.linalg.norm(phi4-phi2, axis=1)
+    denom = np.linalg.norm(phi2-phi, axis=1)
+    Q = num / denom
+
+    np.save('phi_fir/conv.npy', Q, allow_pickle=False)
+    np.save('phi_fir/t_conv.npy', t, allow_pickle=False)
+    
+    plt.plot(t, Q)
+    plt.grid(True)
+
+    plt.xlabel('$t_*/m$')
+    plt.ylabel('$Q(t)$')
+    plt.ylim(-0.5, 10.5)
+
+    plt.savefig('convergence_cmc.jpg', dpi = 250)
+    plt.show()
+    
+
+    return Q[-1]
 
