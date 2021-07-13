@@ -8,5 +8,5 @@ Eddington Finkelstein coordinates. In the file "cmc_foliation.py" a conatant
 mean curvature foliation is used. The file "plt_fit.py" delivers functions to
 load, analyse and plot the obtained data.
 
-The code is neither optimizes nor documented and only lightly commented, but
+The code is neither optimized nor documented and only lightly commented, but
 it is sufficient for the task it was designed to do. 
